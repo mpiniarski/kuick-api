@@ -1,17 +1,3 @@
-pluginManagement {
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.id == "kotlin-multiplatform") {
-                useModule("org.jetbrains.kotlin:kotlin-gradle-plugin:${requested.version}")
-            }
-        }
-    }
-}
-rootProject.name = 'kuick-api'
-
-
-enableFeaturePreview('GRADLE_METADATA')
-
 include ':kuick-api-core'
 include ':kuick-api-rest'
 include ':kuick-api-rpc'
