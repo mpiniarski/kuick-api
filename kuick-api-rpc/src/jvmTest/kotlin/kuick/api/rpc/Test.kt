@@ -1,12 +1,14 @@
 package kuick.api.rpc
 
-import com.google.inject.Guice.createInjector
+import com.google.inject.Guice
 import io.ktor.http.HttpMethod
 import io.ktor.routing.routing
 import io.ktor.server.testing.TestApplicationEngine
 import io.ktor.server.testing.handleRequest
 import io.ktor.server.testing.withTestApplication
 import junit.framework.Assert.assertEquals
+import kuick.api.core.parameters.include.InvalidIncludeParamException
+import kuick.api.core.parameters.preserve.InvalidFieldParamException
 import kuick.api.core.toJson
 import org.junit.Test
 import javax.inject.Singleton
@@ -82,10 +84,18 @@ class Test {
     }
 
     private fun rpcTest(block: TestApplicationEngine.() -> Unit) {
-        val injector = createInjector()
+        val injector = Guice.createInjector()
         withTestApplication {
             application.routing {
-                rpcRoute<ResourceApi>(injector){}
+                rpcRoute<ResourceApi>(injector){
+                    withFieldsParameter()
+                    withIncludeParameter(
+                            // TODO before I tried to provide here: Resource::otherResource to OtherResourceApi::getOne -> discuss
+                            Resource::otherResource to { id -> injector.getInstance(OtherResourceApi::class.java).getOne(id) },
+                            OtherResource::otherResource2 to { id -> injector.getInstance(OtherResource2Api::class.java).getOne(id) }
+                    )
+                }
+
             }
 
             block()
@@ -109,6 +119,109 @@ class Test {
                         )
                 ).toJson(),
                 handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll").response.content
+        )
+    }
+
+    @Test
+    fun field_test() = rpcTest {
+        assertEquals(
+                listOf(
+                        mapOf(
+                                "field1" to "test1"
+                        ),
+                        mapOf(
+                                "field1" to "test2"
+                        )
+                ).toJson(),
+                handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$fields=[field1]").response.content
+        )
+    }
+
+    @Test
+    fun include_test() = rpcTest {
+        assertEquals(
+                listOf(
+                        mapOf(
+                                "id" to "resource-id-1"
+                        ),
+                        mapOf(
+                                "id" to "resource-id-2",
+                                "otherResource" to mapOf(
+                                        "id" to "other-resource-id-2",
+                                        "field1" to "test1",
+                                        "field2" to 10,
+                                        "otherResource2" to "other-resource-2-id-1"
+                                )
+                        )
+                ).toJson(),
+                handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$fields=[id,otherResource]&\$include=[otherResource]").response.content
+        )
+    }
+
+    @Test(expected = InvalidFieldParamException::class)
+    fun `should throw exception on wrongly defined fields parameter - when trying to preserve field of nested resource without preserving field itself`() = rpcTest {
+        handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$fields=[id,otherResource.id]").response.content
+    }
+
+    @Test(expected = InvalidFieldParamException::class)
+    fun `should throw exception on wrongly defined fields parameter - when trying to preserve field that don't exist in a model`() = rpcTest {
+        handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$fields=[id,someField]").response.content
+    }
+
+    @Test(expected = InvalidIncludeParamException::class)
+    fun `should throw exception on wrongly defined include parameter - when include is not supported for specified field`() = rpcTest {
+        handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$include=[id]").response.content
+    }
+
+    @Test(expected = InvalidIncludeParamException::class)
+    fun `should throw exception on wrongly defined include parameter - when trying to include field of nested resource without including resource itself`() = rpcTest {
+        handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$include=[otherResource.id]").response.content
+    }
+
+    @Test(expected = InvalidIncludeParamException::class)
+    fun `should throw exception on wrongly defined include parameter - when trying to include field that don't exist in a model`() = rpcTest {
+        handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$include=[id,someField]").response.content
+    }
+
+    @Test
+    fun `should handle nested fields in fields parameter`() = rpcTest {
+        assertEquals(
+                listOf(
+                        mapOf(
+                                "id" to "resource-id-1"
+                        ),
+                        mapOf(
+                                "id" to "resource-id-2",
+                                "otherResource" to mapOf(
+                                        "id" to "other-resource-id-2"
+                                )
+                        )
+                ).toJson(),
+                handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$fields=[id,otherResource,otherResource.id]&\$include=[otherResource]").response.content
+        )
+    }
+
+    @Test
+    fun `should handle nested fields in include parameter`() = rpcTest {
+        assertEquals(
+                listOf(
+                        mapOf(
+                                "id" to "resource-id-1"
+                        ),
+                        mapOf(
+                                "id" to "resource-id-2",
+                                "otherResource" to mapOf(
+                                        "id" to "other-resource-id-2",
+                                        "field1" to "test1",
+                                        "field2" to 10,
+                                        "otherResource2" to mapOf(
+                                                "id" to "other-resource-2-id-1",
+                                                "field1" to "test1"
+                                        )
+                                )
+                        )
+                ).toJson(),
+                handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$fields=[id,otherResource]&\$include=[otherResource,otherResource.otherResource2]").response.content
         )
     }
 }
