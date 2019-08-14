@@ -11,10 +11,19 @@ import io.ktor.routing.Route
 import io.ktor.routing.route
 import io.ktor.util.AttributeKey
 import kuick.api.core.buildArgsFromObject
+import kuick.api.core.clazz
+import kuick.api.core.getAsTree
+import kuick.api.core.parameters.include.IncludeParam
+import kuick.api.core.parameters.include.includeRelatedResources
+import kuick.api.core.parameters.preserve.FieldsParam
+import kuick.api.core.parameters.preserve.preserveFields
 import kuick.json.Json.gson
 import kuick.json.Json.jsonParser
 import kotlin.reflect.KFunction
+import kotlin.reflect.KProperty
 import kotlin.reflect.full.callSuspend
+import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.full.starProjectedType
 
 data class RestRouting(
         val parent: Route,
@@ -28,6 +37,14 @@ data class RestRouting(
             parent.route(resourceName, method = route.httpMethod) {
                 println("REST: ${route.httpMethod.value} /$resourceName -> ${route.handler}") // logging
 
+                val responseClass = route.handler.returnType.run {
+                    return@run if (isSubtypeOf(List::class.starProjectedType)) {
+                        this.arguments[0].type!!.clazz
+                    } else {
+                        this.clazz
+                    }
+                }.java
+
                 handle {
 
                     val args = buildArgsFromObject(
@@ -40,6 +57,20 @@ data class RestRouting(
 
                     val jsonResult = gson.toJsonTree(result)
 
+                    val queryParameters = call.request.queryParameters
+
+                    //TODO handle case when we include smth just to cut it out when filtering
+                    if (route.config.includeParameterConfiguration != null && "\$include" in queryParameters) {
+                        val configuration = route.config.includeParameterConfiguration!!
+                        val includeParam = IncludeParam.create(queryParameters.getAsTree("\$include"), responseClass, configuration)
+                        jsonResult.includeRelatedResources(includeParam, configuration)
+                    }
+
+                    if (route.config.withFieldsParameter && "\$fields" in queryParameters) {
+                        val fieldsParam = FieldsParam.create(queryParameters.getAsTree("\$fields"), responseClass)
+                        jsonResult.preserveFields(fieldsParam)
+                    }
+
                     call.respondText(jsonResult.toString(), ContentType.Application.Json) // serialization
                 }
             }
@@ -51,7 +82,21 @@ class RestRoute(
         val config: Configuration = Configuration()
 ) {
 
-    class Configuration
+    class Configuration {
+        var withFieldsParameter: Boolean = false
+            private set
+        var includeParameterConfiguration: Map<String, suspend (id: String) -> Any>? = null
+            private set
+
+        fun withFieldsParameter() {
+            withFieldsParameter = true
+        }
+
+        fun withIncludeParameter(vararg configuration: Pair<KProperty<Any?>, suspend (id: String) -> Any>) {
+            includeParameterConfiguration = configuration
+                    .map { it.first.name to it.second }.toMap()
+        }
+    }
 }
 
 
