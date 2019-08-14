@@ -1,0 +1,5 @@
+dependencies {
+    jvmApi project(":kuick-api-core")
+
+    jvmTestImplementation "io.ktor:ktor-server-test-host:$ktor_version"
+}
