@@ -109,6 +109,11 @@ fun Parameters.getAsTree(name: String): Node<String> = this[name]?.toJsonArray()
         ?.toTree()
         ?: emptyTree()
 
+
+fun Map<String,List<String>>.getAsTree(name: String): Node<String> = this[name]?.first()?.toJsonArray()?.asStringList()
+    ?.toTree()
+    ?: emptyTree()
+
 fun List<String>.toTree(rootValue: String? = null, distinct: Boolean = false): Node<String> = Node(
         value = rootValue,
         children = (if (distinct) distinct() else this).toNodeList()
