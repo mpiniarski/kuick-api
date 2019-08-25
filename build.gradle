@@ -26,7 +26,10 @@ allprojects {
 
 subprojects {
     group = "com.mpiniarski"
+    version = "1.0.0"
 
+    apply plugin: 'maven'
+    apply plugin: 'maven-publish'
     apply plugin: 'kotlin-multiplatform'
 
     kotlin {
@@ -63,6 +66,35 @@ subprojects {
             jvmTestImplementation "org.mockito:mockito-core:2.24.0"
             jvmTestImplementation "org.assertj:assertj-core:3.11.1"
             jvmTestImplementation "io.mockk:mockk:1.9"
+        }
+    }
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                groupId = project.group
+                artifactId = project.name
+                version = project.version
+
+                from components.kotlin
+
+                maven(MavenPublication) {
+                    pom {
+//                        name = project.name
+//                        description = project.property("project.description")
+//                        url = project.property("project.scm.url")
+//                        licenses {
+//                            license {
+//                                name = project.property("project.license.name")
+//                                url = project.property("project.license.url")
+//                            }
+//                        }
+//                        scm {
+//                            url = project.property("project.scm.url")
+//                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -60,7 +60,9 @@ class Test {
         fun getOne(id: String): Resource = map[id] ?: throw RuntimeException("404")
 
         fun getAll(): List<Resource> = map.values.toList()
-        fun test(): String = "TEST"
+        fun test(test: String): String {
+            return test
+        }
     }
 
     @Singleton
@@ -114,22 +116,23 @@ class Test {
 
             application.routing {
                 restRoute<ResourceApi>(injector, "resources") {
-
-                    withSomeCheck {
-                        withSomeAdditionalParameter {
-                            get(ResourceApi::getAll) {
-                                withFieldsParameter()
-                                //TODO provide better way of configuration to support correctly nested resources and don't have to repeat config fot the same model in different endpoints
-                                withIncludeParameter(
-                                    // TODO before I tried to provide here: Resource::otherResource to OtherResourceApi::getOne -> discuss
-                                    Resource::otherResource to { id ->
-                                        injector.getInstance(OtherResourceApi::class.java).getOne(id)
-                                    },
-                                    OtherResource::otherResource2 to { id ->
-                                        injector.getInstance(OtherResource2Api::class.java).getOne(id)
-                                    }
-                                )
+                    get(ResourceApi::getAll) {
+                        withFieldsParameter()
+                        //TODO provide better way of configuration to support correctly nested resources and don't have to repeat config fot the same model in different endpoints
+                        withIncludeParameter(
+                            // TODO before I tried to provide here: Resource::otherResource to OtherResourceApi::getOne -> discuss
+                            Resource::otherResource to { id ->
+                                injector.getInstance(OtherResourceApi::class.java).getOne(id)
+                            },
+                            OtherResource::otherResource2 to { id ->
+                                injector.getInstance(OtherResource2Api::class.java).getOne(id)
                             }
+                        )
+                    }
+
+                    route("test"){
+                        withSomeAdditionalParameter {
+                            get(ResourceApi::test)
                         }
                     }
                 }

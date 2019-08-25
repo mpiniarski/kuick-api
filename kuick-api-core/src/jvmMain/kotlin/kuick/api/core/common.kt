@@ -109,6 +109,7 @@ fun Parameters.getAsTree(name: String): Node<String> = this[name]?.toJsonArray()
         ?.toTree()
         ?: emptyTree()
 
+fun String.asTree() = this.toJsonArray().asStringList().toTree()
 
 fun Map<String,List<String>>.getAsTree(name: String): Node<String> = this[name]?.first()?.toJsonArray()?.asStringList()
     ?.toTree()

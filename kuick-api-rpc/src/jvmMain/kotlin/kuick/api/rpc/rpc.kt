@@ -12,6 +12,7 @@ import io.ktor.routing.post
 import io.ktor.util.AttributeKey
 import io.ktor.util.pipeline.PipelineContext
 import io.ktor.util.toMap
+import kuick.api.core.asTree
 import kuick.api.core.buildArgsFromArray
 import kuick.api.core.clazz
 import kuick.api.core.getAsTree
@@ -22,7 +23,6 @@ import kuick.api.core.parameters.preserve.preserveFields
 import kuick.json.Json
 import kuick.json.Json.gson
 import kotlin.reflect.KFunction
-import kotlin.reflect.KProperty
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.memberFunctions
@@ -33,8 +33,7 @@ typealias RpcHandleMap = MutableMap<String, Triple<Any, KFunction<*>, RpcRouting
 data class RpcRouting(
     val parent: Route,
     val api: Any,
-    val injector: Injector,
-    val config: Configuration = Configuration()
+    val injector: Injector
 ) {
     companion object {
         val handleMap: RpcHandleMap = mutableMapOf()
@@ -43,14 +42,15 @@ data class RpcRouting(
     fun registerAll() {
         api.visitRPC { srvName, method ->
             val path = "/rpc/$srvName/${method.name}"
-            println("RPC: $path -> $method") // logging
+            println("RPC: $parent/$path -> $method") // logging
+            val config = Configuration(parent.attributes.getOrNull(INCLUDE_CONFIG_ATTRIBUTE_KEY))
             parent.post(path) {
                 val jsonResult =
                     handleRpcRequest(
                         method,
                         call.receiveText(),
                         call.request.queryParameters.toMap(),
-                            // .map { it.key to it.value.first() }.toMap(),
+                        // .map { it.key to it.value.first() }.toMap(),
                         api,
                         config
                     )
@@ -74,21 +74,9 @@ data class RpcRouting(
         }
     }
 
-    class Configuration {
-        var withFieldsParameter: Boolean = false
-            private set
-        var includeParameterConfiguration: Map<String, suspend (id: String) -> Any>? = null
-            private set
-
-        fun withFieldsParameter() {
-            withFieldsParameter = true
-        }
-
-        fun withIncludeParameter(vararg configuration: Pair<KProperty<Any?>, suspend (id: String) -> Any>) {
-            includeParameterConfiguration = configuration
-                .map { it.first.name to it.second }.toMap()
-        }
-    }
+    data class Configuration(
+        val includeParameterConfiguration: Map<String, suspend (id: String) -> Any>?
+    )
 }
 
 suspend fun PipelineContext<Unit, ApplicationCall>.handleRpcRequest(
@@ -116,15 +104,15 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handleRpcRequest(
     val jsonResult = gson.toJsonTree(result)
 
     //TODO handle case when we include smth just to cut it out when filtering
-    if (config.includeParameterConfiguration != null && "\$include" in queryParameters) {
+    call.attributes.getOrNull(INCLUDE_ATTRIBUTE_KEY)?.let {
         val configuration = config.includeParameterConfiguration!!
         val includeParam =
             IncludeParam.create(queryParameters.getAsTree("\$include"), responseClass, configuration)
         jsonResult.includeRelatedResources(includeParam, configuration)
     }
 
-    if (config.withFieldsParameter && "\$fields" in queryParameters) {
-        val fieldsParam = FieldsParam.create(queryParameters.getAsTree("\$fields"), responseClass)
+    call.attributes.getOrNull(FIELDS_ATTRIBUTE_KEY)?.let {
+        val fieldsParam = FieldsParam.create(it.asTree(), responseClass)
         jsonResult.preserveFields(fieldsParam)
     }
     return jsonResult
