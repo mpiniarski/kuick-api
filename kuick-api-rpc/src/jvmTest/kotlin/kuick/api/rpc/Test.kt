@@ -1,22 +1,17 @@
 package kuick.api.rpc
 
 import com.google.inject.Guice
-import io.ktor.application.ApplicationCallPipeline
-import io.ktor.application.call
 import io.ktor.http.HttpMethod
-import io.ktor.routing.Route
 import io.ktor.routing.routing
 import io.ktor.server.testing.TestApplicationEngine
 import io.ktor.server.testing.handleRequest
 import io.ktor.server.testing.withTestApplication
-import io.ktor.util.AttributeKey
 import junit.framework.Assert.assertEquals
 import kuick.api.core.parameters.include.InvalidIncludeParamException
 import kuick.api.core.parameters.preserve.InvalidFieldParamException
 import kuick.api.core.toJson
 import org.junit.Test
 import javax.inject.Singleton
-import kotlin.test.assertNotEquals
 
 class Test {
 
@@ -38,15 +33,6 @@ class Test {
         val id: String,
         val field1: String
     )
-
-    //TODO Providing additional parameters (later passed to handler method) discuss
-    private fun Route.withSomeAdditionalParameter(path: String = "", build: Route.() -> Unit) =
-        this.createChild(selector).let {
-            this.intercept(ApplicationCallPipeline.Features) {
-                call.attributes.put(AttributeKey("test"), "test")
-            }
-            build(this)
-        }
 
     @Singleton
     class ResourceApi {
@@ -82,7 +68,6 @@ class Test {
         )
 
         fun getOne(id: String): OtherResource = map[id] ?: throw RuntimeException("404")
-        fun test(test: String): String = test
     }
 
     @Singleton
@@ -110,12 +95,12 @@ class Test {
                         injector.getInstance(OtherResource2Api::class.java).getOne(id)
                     }
                 )
-                rpcRoute<ResourceApi>(injector){
-                    // withParameter("SESSION"){
-                    //     call.sessions
-                    // }
+                rpcRoute<ResourceApi>(injector) {
+                    withParameter("test") { "test" }
                 }
-                rpcRoute<OtherResourceApi>(injector)
+                rpcRoute<OtherResourceApi>(injector) {
+                    withParameter("test2") { "test2" }
+                }
             }
 
             block()
@@ -272,14 +257,6 @@ class Test {
             handleRequest(
                 HttpMethod.Post,
                 "/rpc/ResourceApi/test"
-            ).response.content
-        )
-
-        assertNotEquals(
-            "\"test\"",
-            handleRequest(
-                HttpMethod.Post,
-                "/rpc/OtherResourceApi/test"
             ).response.content
         )
     }

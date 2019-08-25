@@ -9,6 +9,7 @@ import io.ktor.request.receiveText
 import io.ktor.response.respondText
 import io.ktor.routing.Route
 import io.ktor.routing.post
+import io.ktor.routing.route
 import io.ktor.util.AttributeKey
 import io.ktor.util.pipeline.PipelineContext
 import io.ktor.util.toMap
@@ -39,26 +40,30 @@ data class RpcRouting(
         val handleMap: RpcHandleMap = mutableMapOf()
     }
 
-    fun registerAll() {
-        api.visitRPC { srvName, method ->
-            val path = "/rpc/$srvName/${method.name}"
-            println("RPC: $parent/$path -> $method") // logging
-            val config = Configuration(parent.attributes.getOrNull(INCLUDE_CONFIG_ATTRIBUTE_KEY))
-            parent.post(path) {
-                val jsonResult =
-                    handleRpcRequest(
-                        method,
-                        call.receiveText(),
-                        call.request.queryParameters.toMap(),
-                        // .map { it.key to it.value.first() }.toMap(),
-                        api,
-                        config
-                    )
+    fun registerAll(): Route {
+        val config = Configuration(parent.attributes.getOrNull(INCLUDE_CONFIG_ATTRIBUTE_KEY))
+        return parent.route("/rpc/${api.javaClass.simpleName}") {
+            api.visitRPC { srvName, method ->
+                val path = "/${method.name}"
+                println("RPC: $this/$path -> $method") // logging
 
-                call.respondText(jsonResult.toString(), ContentType.Application.Json)
+                post(path) {
+                    val jsonResult =
+                        handleRpcRequest(
+                            method,
+                            call.receiveText(),
+                            call.request.queryParameters.toMap(),
+                            // .map { it.key to it.value.first() }.toMap(),
+                            api,
+                            config
+                        )
 
+                    call.respondText(jsonResult.toString(), ContentType.Application.Json)
+
+                }
+
+                handleMap[path] = Triple(api, method, config)
             }
-            handleMap[path] = Triple(api, method, config)
         }
     }
 
@@ -89,7 +94,10 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handleRpcRequest(
     val args = buildArgsFromArray(
         method,
         Json.jsonParser.parse(body),
-        call.attributes.allKeys.map { it.name to call.attributes[it as AttributeKey<Any>] }.toMap()
+        call.attributes.allKeys
+            .filter { it.name.startsWith(EXTRA_ARG_PREFIX) }
+            .map { it.name.substringAfter(EXTRA_ARG_PREFIX) to call.attributes[it as AttributeKey<Any>] }
+            .toMap()
     )
 
     val responseClass = method.returnType.run {

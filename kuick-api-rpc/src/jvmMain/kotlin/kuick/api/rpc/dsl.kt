@@ -18,13 +18,15 @@ inline fun <T> Route.rpcRoute(
 ): Route {
     val api = injector.getInstance(clazz)!!
     return RpcRouting(this, api, injector)
-        .also { it.registerAll() }
-        .parent
+        .registerAll()
+        .apply(build)
 }
 
+const val EXTRA_ARG_PREFIX = "\$extraArg_"
+
 fun <T : Any> Route.withParameter(name: String, body: ApplicationRequest.() -> T) {
-    intercept(ApplicationCallPipeline.Features) {
-        call.attributes.put(AttributeKey<T>("\$name"), body(call.request))
+    intercept(ApplicationCallPipeline.Call) {
+        call.attributes.put(AttributeKey<T>("$EXTRA_ARG_PREFIX$name"), body(call.request))
     }
 }
 
@@ -32,7 +34,7 @@ const val FIELDS_ATTRIBUTE_NAME = "\$fields"
 val FIELDS_ATTRIBUTE_KEY = AttributeKey<String>(FIELDS_ATTRIBUTE_NAME)
 
 fun Route.withFieldsParameter() {
-    intercept(ApplicationCallPipeline.Features) {
+    intercept(ApplicationCallPipeline.Call) {
         call.request.queryParameters[FIELDS_ATTRIBUTE_NAME]?.let {
             call.attributes.put(FIELDS_ATTRIBUTE_KEY, it)
         }
@@ -45,7 +47,7 @@ val INCLUDE_CONFIG_ATTRIBUTE_KEY = AttributeKey<Map<String, suspend (id: String)
 
 fun Route.withIncludeParameter(vararg configuration: Pair<KProperty<Any?>, suspend (id: String) -> Any>) {
     this.attributes.put(INCLUDE_CONFIG_ATTRIBUTE_KEY, configuration.map { it.first.name to it.second }.toMap())
-    intercept(ApplicationCallPipeline.Features) {
+    intercept(ApplicationCallPipeline.Call) {
         call.request.queryParameters[INCLUDE_ATTRIBUTE_NAME]?.let {
             call.attributes.put(INCLUDE_ATTRIBUTE_KEY, it)
         }
