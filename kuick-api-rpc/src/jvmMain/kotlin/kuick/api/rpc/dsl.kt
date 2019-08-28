@@ -1,11 +1,13 @@
 package kuick.api.rpc
 
 import com.google.inject.Injector
+import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationCallPipeline
 import io.ktor.application.call
 import io.ktor.request.ApplicationRequest
 import io.ktor.routing.Route
 import io.ktor.util.AttributeKey
+import io.ktor.util.pipeline.PipelineContext
 import kotlin.reflect.KProperty
 
 inline fun <reified T> Route.rpcRoute(injector: Injector, build: Route.() -> Unit = {}): Route =
@@ -24,9 +26,15 @@ inline fun <T> Route.rpcRoute(
 
 const val EXTRA_ARG_PREFIX = "\$extraArg_"
 
-fun <T : Any> Route.withParameter(name: String, body: ApplicationRequest.() -> T) {
+fun <T : Any> Route.withParameter(
+    name: String,
+    ifNull: suspend PipelineContext<Unit, ApplicationCall>.() -> Unit = {},
+    body: ApplicationRequest.() -> T?
+) {
     intercept(ApplicationCallPipeline.Call) {
-        call.attributes.put(AttributeKey<T>("$EXTRA_ARG_PREFIX$name"), body(call.request))
+        body(call.request)?.let {
+            call.attributes.put(AttributeKey<T>("$EXTRA_ARG_PREFIX$name"), it)
+        } ?: ifNull(this)
     }
 }
 

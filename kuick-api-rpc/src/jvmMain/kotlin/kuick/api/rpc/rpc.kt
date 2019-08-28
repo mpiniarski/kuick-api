@@ -25,8 +25,8 @@ import kuick.json.Json
 import kuick.json.Json.gson
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.callSuspend
+import kotlin.reflect.full.declaredMemberFunctions
 import kotlin.reflect.full.isSubtypeOf
-import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.starProjectedType
 
 typealias RpcHandleMap = MutableMap<String, Triple<Any, KFunction<*>, RpcRouting.Configuration>>
@@ -40,12 +40,14 @@ data class RpcRouting(
         val handleMap: RpcHandleMap = mutableMapOf()
     }
 
+
     fun registerAll(): Route {
         val config = Configuration(parent.attributes.getOrNull(INCLUDE_CONFIG_ATTRIBUTE_KEY))
         return parent.route("/rpc/${api.javaClass.simpleName}") {
             api.visitRPC { srvName, method ->
                 val path = "/${method.name}"
-                println("RPC: $this/$path -> $method") // logging
+                val fullPath = "$this$path"
+                println("RPC: $fullPath -> $method") // logging
 
                 post(path) {
                     val jsonResult =
@@ -62,14 +64,14 @@ data class RpcRouting(
 
                 }
 
-                handleMap[path] = Triple(api, method, config)
+                handleMap[fullPath] = Triple(api, method, config)
             }
         }
     }
 
-    fun Any.visitRPC(opAction: (String, KFunction<*>) -> Unit) {
+    private fun Any.visitRPC(opAction: (String, KFunction<*>) -> Unit) {
         val srvName = javaClass.simpleName
-        javaClass.kotlin.memberFunctions.forEach { function ->
+        javaClass.kotlin.declaredMemberFunctions.forEach { function ->
             try {
                 opAction(srvName, function)
             } catch (exception: Throwable) {
@@ -101,7 +103,7 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handleRpcRequest(
     )
 
     val responseClass = method.returnType.run {
-        return@run if (isSubtypeOf(List::class.starProjectedType)) {
+        return@run if (isSubtypeOf(Collection::class.starProjectedType) or isSubtypeOf(Array<Any>::class.starProjectedType)) {
             this.arguments[0].type!!.clazz
         } else {
             this.clazz
