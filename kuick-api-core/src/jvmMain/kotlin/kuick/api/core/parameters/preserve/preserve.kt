@@ -11,11 +11,14 @@ import kuick.api.core.splitBy
  * 2) If contains a nested field of related resource, related resource should also be preserved
  */
 class FieldsParam constructor(
-        val root: Node<String>
+    val root: Node<String>
 ) {
     companion object {
-        fun <T : Any?> create(root: Node<String>, relatedClass: Class<T>): FieldsParam {
-            validateFieldsParamNode(root, relatedClass)
+        fun create(root: Node<String>, relatedClass: Class<out Any>): FieldsParam {
+            val result = validateFieldsParamNode(root, relatedClass)
+            if (result.isNotEmpty()) {
+                throw InvalidFieldParamException.Composite(result)
+            }
             return FieldsParam(root)
         }
     }
@@ -40,31 +43,40 @@ private suspend fun JsonElement.preserveFields(fieldsParam: Node<String>) {
     }
 }
 
-private fun <T> validateFieldsParamNode(node: Node<String>, relatedClass: Class<T>) {
+private fun validateFieldsParamNode(
+    node: Node<String>,
+    relatedClass: Class<out Any>?
+): MutableList<InvalidFieldParamException> {
     val result = mutableListOf<InvalidFieldParamException>()
     val nodeFieldNames = node.children
-            .mapNotNull { it.value }
-    val relatedClassFieldNames = relatedClass.declaredFields
+        .mapNotNull { it.value }
+
+    if (relatedClass != null) {// TODO validates only on first level, not enough information for other levels
+        val relatedClassFieldNames = relatedClass.declaredFields
             .map { it.name }
             .toSet()
 
-    val notMatchingFields = nodeFieldNames
+        val notMatchingFields = nodeFieldNames
             .filter { !relatedClassFieldNames.contains(it) }
-    if (notMatchingFields.isNotEmpty()) {
-        result.add(InvalidFieldParamException.NotExistingFields(notMatchingFields))
+        if (notMatchingFields.isNotEmpty()) {
+            result.add(InvalidFieldParamException.NotExistingFields(notMatchingFields))
+        }
     }
 
     val (nodesToInlcude, nodesWithoutProperDefinition) = node.children
-            .splitBy { it.children.contains(Node.emptyNode()) }
-            .let {
-                Pair(it.first, it.second.filter { it != Node.emptyNode() })
-            }
+        .splitBy { it.children.contains(Node.emptyNode()) }
+        .let {
+            Pair(it.first, it.second.filter { it != Node.emptyNode() })
+        }
 
     if (nodesWithoutProperDefinition.isNotEmpty()) { // TODO provide option to ignore this case
         result.add(InvalidFieldParamException.OrphanFields(nodesWithoutProperDefinition.mapNotNull { it.value }))
     }
 
-    if (result.isNotEmpty()) {
-        throw InvalidFieldParamException.Composite(result)
+    node.children.forEach { child ->
+        if (child.value != "" && child.value != null) {
+            result.addAll(validateFieldsParamNode(child, null))
+        }
     }
+    return result
 }
