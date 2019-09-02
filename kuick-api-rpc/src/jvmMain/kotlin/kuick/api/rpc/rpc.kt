@@ -17,6 +17,7 @@ import kuick.api.core.asTree
 import kuick.api.core.buildArgsFromArray
 import kuick.api.core.clazz
 import kuick.api.core.getAsTree
+import kuick.api.core.parameters.include.IncludeConfiguration
 import kuick.api.core.parameters.include.IncludeParam
 import kuick.api.core.parameters.include.includeRelatedResources
 import kuick.api.core.parameters.preserve.FieldsParam
@@ -26,6 +27,7 @@ import kuick.json.Json.gson
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.full.declaredMemberFunctions
+import kotlin.reflect.full.instanceParameter
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.starProjectedType
 
@@ -42,7 +44,12 @@ data class RpcRouting(
 
 
     fun registerAll(): Route {
-        val config = Configuration(parent.attributes.getOrNull(INCLUDE_CONFIG_ATTRIBUTE_KEY))
+        val config = Configuration(
+            parent.attributes.getOrNull(INCLUDE_CONFIG_ATTRIBUTE_KEY)
+                ?.groupBy { it.first.instanceParameter!!.type.clazz.java }
+                ?.map { it.key to it.value.map { it.first.name to it.second }.toMap() }
+                ?.toMap()
+        )
         return parent.route("/rpc/${api.javaClass.simpleName}") {
             api.visitRPC { srvName, method ->
                 val path = "/${method.name}"
@@ -82,7 +89,7 @@ data class RpcRouting(
     }
 
     data class Configuration(
-        val includeParameterConfiguration: Map<String, suspend (id: String) -> Any>?
+        val includeParameterConfiguration: IncludeConfiguration?
     )
 }
 
@@ -118,7 +125,7 @@ suspend fun PipelineContext<Unit, ApplicationCall>.handleRpcRequest(
         val configuration = config.includeParameterConfiguration!!
         val includeParam =
             IncludeParam.create(queryParameters.getAsTree("\$include"), responseClass, configuration)
-        jsonResult.includeRelatedResources(includeParam, configuration)
+        jsonResult.includeRelatedResources(includeParam, configuration, responseClass)
     }
 
     call.attributes.getOrNull(FIELDS_ATTRIBUTE_KEY)?.let {

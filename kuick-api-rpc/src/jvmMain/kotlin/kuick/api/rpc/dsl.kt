@@ -51,10 +51,10 @@ fun Route.withFieldsParameter() {
 
 const val INCLUDE_ATTRIBUTE_NAME = "\$include"
 val INCLUDE_ATTRIBUTE_KEY = AttributeKey<String>(INCLUDE_ATTRIBUTE_NAME)
-val INCLUDE_CONFIG_ATTRIBUTE_KEY = AttributeKey<Map<String, suspend (id: String) -> Any>>("\$include_config")
+val INCLUDE_CONFIG_ATTRIBUTE_KEY = AttributeKey<List<Pair<KProperty<Any?>, suspend (id: String) -> Any>>>("\$include_config")
 
 fun Route.withIncludeParameter(vararg configuration: Pair<KProperty<Any?>, suspend (id: String) -> Any>) {
-    this.attributes.put(INCLUDE_CONFIG_ATTRIBUTE_KEY, configuration.map { it.first.name to it.second }.toMap())
+    this.attributes.put(INCLUDE_CONFIG_ATTRIBUTE_KEY, configuration.toList())
     intercept(ApplicationCallPipeline.Call) {
         call.request.queryParameters[INCLUDE_ATTRIBUTE_NAME]?.let {
             call.attributes.put(INCLUDE_ATTRIBUTE_KEY, it)
