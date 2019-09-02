@@ -197,6 +197,15 @@ class Test {
         }
 
     @Test(expected = InvalidIncludeParamException::class)
+    fun `should throw exception on wrongly defined include parameter - on nested resource when include is not supported for specified field`() =
+        rpcTest {
+            handleRequest(
+                HttpMethod.Post,
+                "/rpc/ResourceApi/getAll?\$include=[otherResource,otherResource.id]"
+            ).response.content
+        }
+
+    @Test(expected = InvalidIncludeParamException::class)
     fun `should throw exception on wrongly defined include parameter - when trying to include field that don't exist in a model`() =
         rpcTest {
             handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$include=[id,someField]").response.content

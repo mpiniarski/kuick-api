@@ -3,9 +3,11 @@ package kuick.api.core.parameters.include
 import com.google.gson.JsonElement
 import kuick.api.core.Node
 import kuick.api.core.applyToEachObject
+import kuick.api.core.clazz
 import kuick.api.core.emptyNode
 import kuick.api.core.splitBy
 import kuick.json.Json.gson
+import kotlin.reflect.jvm.reflect
 
 typealias IncludeConfiguration = Map<Class<out Any?>, Map<String, suspend (id: String) -> Any>>
 
@@ -24,7 +26,8 @@ data class IncludeParam private constructor(
             responseClass: Class<T>,
             configuration: IncludeConfiguration
         ): IncludeParam {
-            validateIncludeParamNode(root, responseClass, configuration)
+            val result = validateIncludeParamNode(root, responseClass, configuration)
+            if (result.isNotEmpty()) throw InvalidIncludeParamException.Composite(result)
             return IncludeParam(root)
         }
     }
@@ -75,14 +78,16 @@ private fun <T : Any?> validateIncludeParamNode(
     node: Node<String>,
     relatedClass: Class<T>,
     configuration: IncludeConfiguration
-) {
-    val config = configuration[relatedClass]!! //TODO
+): List<InvalidIncludeParamException> {
+    val config = configuration[relatedClass] ?: emptyMap()
 
     val result = mutableListOf<InvalidIncludeParamException>()
 
     val nodeFieldNames = node.children
         .mapNotNull { it.value }
-    val relatedClassFieldNames = relatedClass.declaredFields
+        .filter { it != "" }
+    val relatedClassFields = relatedClass.declaredFields.toSet()
+    val relatedClassFieldNames = relatedClassFields
         .map { it.name }
         .toSet()
 
@@ -107,7 +112,13 @@ private fun <T : Any?> validateIncludeParamNode(
         result.add(InvalidIncludeParamException.OrphanFields(nodesWithoutProperDefinition.mapNotNull { it.value }))
     }
 
-    if (result.isNotEmpty()) {
-        throw InvalidIncludeParamException.Composite(result)
+    node.children.forEach { child ->
+        if (child.value != "" && child.value != null) {
+            config[child.value]?.reflect()?.returnType?.clazz?.java?.let { childClass ->
+                result.addAll(validateIncludeParamNode(child, childClass, configuration))
+            }
+        }
     }
+
+    return result
 }
