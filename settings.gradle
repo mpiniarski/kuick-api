@@ -1,3 +1,3 @@
 include ':kuick-api-core'
-include ':kuick-api-rest'
 include ':kuick-api-rpc'
+//include ':kuick-api-rest'

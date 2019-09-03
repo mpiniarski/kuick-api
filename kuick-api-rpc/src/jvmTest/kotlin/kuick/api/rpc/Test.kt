@@ -184,7 +184,10 @@ class Test {
     @Test(expected = InvalidFieldParamException::class)
     fun `should throw exception on wrongly defined fields parameter - on nested resource when trying to preserve field of nested resource without preserving field itself`() =
         rpcTest {
-            handleRequest(HttpMethod.Post, "/rpc/ResourceApi/getAll?\$fields=[id,otherField,otherField.otherField2.id]").response.content
+            handleRequest(
+                HttpMethod.Post,
+                "/rpc/ResourceApi/getAll?\$fields=[id,otherField,otherField.otherField2.id]"
+            ).response.content
         }
 
     @Test(expected = InvalidIncludeParamException::class)

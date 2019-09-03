@@ -1,5 +1,6 @@
 package kuick.json
 
+import com.google.common.reflect.TypeToken
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializationContext
@@ -141,7 +142,7 @@ object Json {
 
     inline fun <reified T : Any> fromJson(json: String): T {
         try {
-            return gson.fromJson(json, T::class.java)
+            return gson.fromJson(json, type<T>())
         } catch (t: Throwable) {
             println("ERROR parsing JSON: ${T::class.java} <-- $json")
             throw t
@@ -150,3 +151,5 @@ object Json {
 }
 
 fun annotateJson(@Language("JSON") json: String): String = json
+
+inline fun <reified A : Any> type(): Type = object : TypeToken<A>() {}.type

@@ -112,6 +112,18 @@ class RemoteMonadTest {
         fun getOne(id: String): OtherResource = map[id] ?: throw RuntimeException("404")
     }
 
+    class OtherResourceApiClient {
+        fun getOne(id: String): Remote<OtherResource> = sendCommand(
+            RemoteMonadCommand(
+                "getOne",
+                "/rpc/OtherResourceApi/getOne",
+                emptyMap(),
+                body = "[\"$id\"]",
+                resultBindingName = "last"
+            )
+        )
+    }
+
     @Singleton
     class OtherResource2Api {
         private val map = mapOf(
@@ -125,6 +137,7 @@ class RemoteMonadTest {
     }
 
     private val resourceApi = ResourceApiClient()
+    private val otherResourceApi = OtherResourceApiClient()
 
     private val TestApplicationEngine.device: TestDevice
         get() {
@@ -161,6 +174,7 @@ class RemoteMonadTest {
         withTestApplication {
             application.routing {
                 rpcRoute<ResourceApi>(injector)
+                rpcRoute<OtherResourceApi>(injector)
                 remoteMonadRoute(injector)
             }
             block()
@@ -217,4 +231,28 @@ class RemoteMonadTest {
             }
         )
     }
+
+    @Test
+    fun test4() = remoteMonadTest {
+
+        data class Resource2(
+            val id: String,
+            val field1: String,
+            var field2: Int,
+            val otherResource: OtherResource? = null
+        )
+
+        val list = send(device) { bind { resourceApi.getAll() } }!!
+
+        val list2 = send(device) {
+            list.map {
+                Resource2(
+                    it.id,
+                    it.field1,
+                    it.field2,
+                    it.otherResource?.let { bind { otherResourceApi.getOne(it) } })
+            }
+        }
+    }
 }
+
