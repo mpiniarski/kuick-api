@@ -13,6 +13,6 @@ sealed class Response<T> {
 }
 
 interface Device {
-    fun send(packet: List<Request<*>>): String
+    fun aggregatedSend(packet: List<Request<*>>): String
 }
 

@@ -23,27 +23,32 @@ data class AggregationRouting(
         println("RPC aggregation: $path") // logging
 
         parent.post(path) {
-
             val requests: Array<Request<Any>> = Json.fromJson(call.receiveText())
 
             val results = requests.map { request ->
-                val (api, method, config) = rpcHandleMap[request.path]!! // TODO
-                handleRpcRequest(
-                    method,
-                    request.body,
-                    request.queryParameters,
-                    api,
-                    config
-                )
-            }
-
-            call.respondText( //TODO
-                Json.toJson(results.map {
+                try {
+                    val (api, method, config) = rpcHandleMap[request.path]!! // TODO
+                    val result = handleRpcRequest(
+                        method,
+                        request.body,
+                        request.queryParameters,
+                        api,
+                        config
+                    )
                     mapOf(
                         "status" to "200",
-                        "result" to it
+                        "result" to result
                     )
-                }),
+                } catch (exception: Throwable) { //TODO other exceptions handling
+                    mapOf(
+                        "status" to "500",
+                        "message" to exception.message
+                    )
+                }
+            }
+
+            call.respondText(
+                Json.toJson(results),
                 ContentType.Application.Json
             )
         }

@@ -18,43 +18,43 @@ fun main(args: Array<String>) {
 package kuick.api.rpc.aggregation
 
 import com.google.gson.JsonElement
+import com.google.gson.reflect.TypeToken
 import kuick.json.Json
 
 inline fun <reified A : Any> JsonElement.toResponse(): Response<A> {
     val asString = this.toString()
-    return with(this.asJsonObject["status"].asString) {
-        if (startsWith("2")) Json.fromJson<Response.Success<A>>(asString)
-        else Json.fromJson<Response.Failure<A>>(asString)
-    }
+    val status = this.asJsonObject["status"].asString
+    return if (status.startsWith("2")) {
+        val type = TypeToken.getParameterized(Response.Success::class.java, A::class.java).type
+        Json.fromJson<Response.Success<A>>(asString, type)
+    } else
+        Json.fromJson<Response.Failure<A>>(asString)
 }
 
-inline fun <reified A : Any> send(
-    device: Device,
+inline fun <reified A : Any> Device.send(
     vararg requests: Request<A>
 ): List<Response<A>> {
-    val result = device.send(requests.toList())
+    val result = aggregatedSend(requests.toList())
     return Json.jsonParser.parse(result).asJsonArray
         .map { it.toResponse<A>() }
 }
 
-inline fun <reified A : Any> send(
-    device: Device,
+inline fun <reified A : Any> Device.send(
     requests: List<Request<A>>
 ): List<Response<A>> {
-    val result = device.send(requests)
+    val result = aggregatedSend(requests)
     return Json.jsonParser.parse(result).asJsonArray
         .map { it.toResponse<A>() }
 }
                 
 ${(1..NUM).map { num ->
-                "inline fun <${genericTypesList(num).joinToString(", ") { "reified $it : Any" }}> send(\n" +
-                    "\tdevice: Device,\n" +
+                "inline fun <${genericTypesList(num).joinToString(", ") { "reified $it : Any" }}> Device.send(\n" +
 
                     (1..num).map { "\t_$it: Request<${genericType(it)}>" }.joinToString(",\n") + "\n" +
                     "): Tuple$num<${(1..num).map {
                         "Response<${genericType(it)}>"
                     }.joinToString(", ")}> { \n" +
-                    "\tval result = device.send(listOf(${variables(num)}))\n" +
+                    "\tval result = aggregatedSend(listOf(${variables(num)}))\n" +
                     "\tval responses = Json.jsonParser.parse(result).asJsonArray\n" +
                     "\treturn Tuple$num(\n" +
                     (1..num).map {

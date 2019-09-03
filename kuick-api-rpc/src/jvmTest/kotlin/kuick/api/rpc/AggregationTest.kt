@@ -146,7 +146,7 @@ class AggregationTest {
 
     private val TestApplicationEngine.device: Device
         get() = object : Device {
-            override fun send(packet: List<Request<*>>): String =
+            override fun aggregatedSend(packet: List<Request<*>>): String =
                 handleRequest(HttpMethod.Post, "/rpc/aggregation") {
                     setBody(Json.toJson(packet))
                 }.response.content!! //TODO
@@ -158,8 +158,7 @@ class AggregationTest {
     @Test
     fun `should handle aggregation of multiple resources query`() = rpcAggregationTest {
 
-        val result = send(
-            device,
+        val result = device.send(
             resourceApi.getOne("resource-id-1"),
             resourceApi.getOne("resource-id-2"),
             otherResourceApi.getOne("other-resource-id-1"),
@@ -211,8 +210,7 @@ class AggregationTest {
     @Test
     fun `should handle aggregation of batch query`() = rpcAggregationTest {
 
-        val otherResourcesResult = send(
-            device,
+        val otherResourcesResult = device.send(
             otherResourceApi.getOne("other-resource-id-1"),
             otherResourceApi.getOne("other-resource-id-2")
         )
