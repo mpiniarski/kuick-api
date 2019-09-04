@@ -19,7 +19,7 @@ data class AggregationRouting(
 ) {
     fun register() {
 
-        val path = "/rpc/aggregation"
+        val path = "/aggregation"
         println("RPC aggregation: $path") // logging
 
         parent.post(path) {

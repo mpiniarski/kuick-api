@@ -2,6 +2,7 @@ package kuick.api.rpc
 
 import com.google.inject.Guice
 import io.ktor.http.HttpMethod
+import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.server.testing.TestApplicationEngine
 import io.ktor.server.testing.handleRequest
@@ -173,9 +174,11 @@ class RemoteMonadTest {
         val injector = Guice.createInjector()
         withTestApplication {
             application.routing {
-                rpcRoute<ResourceApi>(injector)
-                rpcRoute<OtherResourceApi>(injector)
-                remoteMonadRoute(injector)
+                route("/rpc") {
+                    rpcRoute<ResourceApi>(injector)
+                    rpcRoute<OtherResourceApi>(injector)
+                    remoteMonadRoute(injector)
+                }
             }
             block()
         }

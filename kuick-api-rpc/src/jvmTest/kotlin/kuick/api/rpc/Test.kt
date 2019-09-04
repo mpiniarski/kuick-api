@@ -2,6 +2,7 @@ package kuick.api.rpc
 
 import com.google.inject.Guice
 import io.ktor.http.HttpMethod
+import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.server.testing.TestApplicationEngine
 import io.ktor.server.testing.handleRequest
@@ -86,20 +87,22 @@ class Test {
         val injector = Guice.createInjector()
         withTestApplication {
             application.routing {
-                withFieldsParameter()
-                withIncludeParameter(
-                    Resource::otherResource to { id ->
-                        injector.getInstance(OtherResourceApi::class.java).getOne(id)
-                    },
-                    OtherResource::otherResource2 to { id ->
-                        injector.getInstance(OtherResource2Api::class.java).getOne(id)
+                route("/rpc") {
+                    withFieldsParameter()
+                    withIncludeParameter(
+                        Resource::otherResource to { id ->
+                            injector.getInstance(OtherResourceApi::class.java).getOne(id)
+                        },
+                        OtherResource::otherResource2 to { id ->
+                            injector.getInstance(OtherResource2Api::class.java).getOne(id)
+                        }
+                    )
+                    rpcRoute<ResourceApi>(injector) {
+                        withParameter("test") { "test" }
                     }
-                )
-                rpcRoute<ResourceApi>(injector) {
-                    withParameter("test") { "test" }
-                }
-                rpcRoute<OtherResourceApi>(injector) {
-                    withParameter("test2") { "test2" }
+                    rpcRoute<OtherResourceApi>(injector) {
+                        withParameter("test2") { "test2" }
+                    }
                 }
             }
 

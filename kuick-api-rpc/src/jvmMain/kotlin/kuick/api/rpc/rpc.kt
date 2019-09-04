@@ -35,13 +35,12 @@ typealias RpcHandleMap = MutableMap<String, Triple<Any, KFunction<*>, RpcRouting
 
 data class RpcRouting(
     val parent: Route,
-    val api: Any,
+    val clazz: Class<Any>,
     val injector: Injector
 ) {
     companion object {
         val handleMap: RpcHandleMap = mutableMapOf()
     }
-
 
     fun registerAll(): Route {
         val config = Configuration(
@@ -50,8 +49,9 @@ data class RpcRouting(
                 ?.map { it.key to it.value.map { it.first.name to it.second }.toMap() }
                 ?.toMap()
         )
-        return parent.route("/rpc/${api.javaClass.simpleName}") {
-            api.visitRPC { srvName, method ->
+        val api = injector.getInstance(clazz)!!
+        return parent.route("/${clazz.simpleName}") {
+            clazz.visitRPC { srvName, method ->
                 val path = "/${method.name}"
                 val fullPath = "$this$path"
                 println("RPC: $fullPath -> $method") // logging
@@ -76,9 +76,9 @@ data class RpcRouting(
         }
     }
 
-    private fun Any.visitRPC(opAction: (String, KFunction<*>) -> Unit) {
-        val srvName = javaClass.simpleName
-        javaClass.kotlin.declaredMemberFunctions.forEach { function ->
+    private fun Class<Any>.visitRPC(opAction: (String, KFunction<*>) -> Unit) {
+        val srvName = simpleName
+        kotlin.declaredMemberFunctions.forEach { function ->
             try {
                 opAction(srvName, function)
             } catch (exception: Throwable) {
@@ -86,6 +86,10 @@ data class RpcRouting(
                 exception.printStackTrace()
             }
         }
+    }
+
+    private fun Any.visitRPC(opAction: (String, KFunction<*>) -> Unit) {
+        javaClass.visitRPC(opAction)
     }
 
     data class Configuration(

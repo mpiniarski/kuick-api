@@ -10,16 +10,15 @@ import io.ktor.util.AttributeKey
 import io.ktor.util.pipeline.PipelineContext
 import kotlin.reflect.KProperty
 
-inline fun <reified T> Route.rpcRoute(injector: Injector, build: Route.() -> Unit = {}): Route =
+inline fun <reified T: Any> Route.rpcRoute(injector: Injector, build: Route.() -> Unit = {}): Route =
     rpcRoute(injector, T::class.java, build)
 
-inline fun <T> Route.rpcRoute(
+inline fun <T: Any> Route.rpcRoute(
     injector: Injector,
     clazz: Class<T>,
     build: Route.() -> Unit = {}
 ): Route {
-    val api = injector.getInstance(clazz)!!
-    return RpcRouting(this, api, injector)
+    return RpcRouting(this, clazz as Class<Any>, injector)
         .registerAll()
         .apply(build)
 }

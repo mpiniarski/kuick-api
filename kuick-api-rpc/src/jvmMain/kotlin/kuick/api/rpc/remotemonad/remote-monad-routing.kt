@@ -19,7 +19,7 @@ data class RemoteMonadRouting(
 ) {
     fun register() {
 
-        val path = "/rpc/remoteMonad"
+        val path = "/remoteMonad"
         println("RPC Remote Monad: $path") // logging
 
         parent.post(path) {
