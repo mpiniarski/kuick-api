@@ -1,18 +1,14 @@
 package kuick.api.rpc.aggregation
 
-data class Request<T>(
-    val method: String,
-    val path: String,
-    val queryParameters: Map<String, List<String>>,
-    val body: String
-)
+import kuick.api.rpc.Device
+import kuick.api.rpc.Request
 
-sealed class Response<T> {
-    data class Success<T>(val result: T, val status: String, val message: String? = null) : Response<T>()
-    data class Failure<T>(val status: String, val message: String? = null) : Response<T>()
+abstract class AggregatingDevice<R>(device: Device<R>) : Device<R> by device {
+    abstract fun aggregatedCall(packet: List<Request<*>>): R
 }
 
-interface Device {
-    fun aggregatedSend(packet: List<Request<*>>): String
-}
-
+// TODO normal Device without <R>
+// abstract class Device {
+//     abstract fun send(request: Request<*>): String
+//     abstract fun aggregatedSend(packet: List<Request<*>>): String
+// }

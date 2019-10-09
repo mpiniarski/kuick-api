@@ -1,4 +1,4 @@
-package kuick.json
+package kuick.api.json
 
 import com.google.common.reflect.TypeToken
 import com.google.gson.Gson

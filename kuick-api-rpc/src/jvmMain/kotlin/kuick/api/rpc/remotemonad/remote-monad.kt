@@ -16,7 +16,7 @@ import arrow.data.fix
 import arrow.data.run
 import arrow.typeclasses.MonadContinuation
 import com.google.common.reflect.TypeToken
-import kuick.json.Json
+import kuick.api.json.Json
 
 typealias Remote<T> = StateT<ReaderPartialOf<Device>, List<RemoteMonadCommand>, T?>
 

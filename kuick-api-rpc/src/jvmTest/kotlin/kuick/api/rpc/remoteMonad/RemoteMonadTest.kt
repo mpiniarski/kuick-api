@@ -1,4 +1,4 @@
-package kuick.api.rpc
+package kuick.api.rpc.remoteMonad
 
 import com.google.inject.Guice
 import io.ktor.http.HttpMethod
@@ -9,6 +9,7 @@ import io.ktor.server.testing.handleRequest
 import io.ktor.server.testing.setBody
 import io.ktor.server.testing.withTestApplication
 import junit.framework.Assert.assertEquals
+import kuick.api.json.Json
 import kuick.api.rpc.remotemonad.Device
 import kuick.api.rpc.remotemonad.Remote
 import kuick.api.rpc.remotemonad.RemoteMonadCommand
@@ -17,7 +18,7 @@ import kuick.api.rpc.remotemonad.remoteMonadRoute
 import kuick.api.rpc.remotemonad.send
 import kuick.api.rpc.remotemonad.sendCommand
 import kuick.api.rpc.remotemonad.sendCommand2
-import kuick.json.Json
+import kuick.api.rpc.rpcRoute
 import org.junit.Test
 import javax.inject.Singleton
 

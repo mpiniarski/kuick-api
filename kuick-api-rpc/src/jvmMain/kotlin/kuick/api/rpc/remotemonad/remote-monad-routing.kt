@@ -7,9 +7,9 @@ import io.ktor.request.receiveText
 import io.ktor.response.respondText
 import io.ktor.routing.Route
 import io.ktor.routing.post
+import kuick.api.json.Json
 import kuick.api.rpc.RpcHandleMap
 import kuick.api.rpc.handleRpcRequest
-import kuick.json.Json
 
 data class RemoteMonadRouting(
     val parent: Route,

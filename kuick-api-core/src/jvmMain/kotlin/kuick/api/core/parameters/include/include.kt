@@ -6,7 +6,7 @@ import kuick.api.core.applyToEachObject
 import kuick.api.core.clazz
 import kuick.api.core.emptyNode
 import kuick.api.core.splitBy
-import kuick.json.Json.gson
+import kuick.api.json.Json.gson
 import kotlin.reflect.jvm.reflect
 
 typealias IncludeConfiguration = Map<Class<out Any?>, Map<String, suspend (id: String) -> Any>>

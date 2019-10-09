@@ -6,9 +6,9 @@ import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import io.ktor.http.Parameters
-import kuick.json.Json
-import kuick.json.Json.gson
-import kuick.json.Json.jsonParser
+import kuick.api.json.Json
+import kuick.api.json.Json.gson
+import kuick.api.json.Json.jsonParser
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.KType

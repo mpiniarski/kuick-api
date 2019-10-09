@@ -33,10 +33,6 @@ ${(1..TUPLES).map { num ->
                     "(${parametersList(num).joinToString(", ") { "val $it" }})"
 
             }.joinToString("\n")}
-            
-typealias Pair<A, B> = Tuple2<A, B>
-typealias Triple<A, B, C> = Tuple3<A, B, C>
-
             """
                 .replace("\t", "    ")
                 .trimIndent()

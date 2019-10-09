@@ -7,9 +7,10 @@ import io.ktor.request.receiveText
 import io.ktor.response.respondText
 import io.ktor.routing.Route
 import io.ktor.routing.post
+import kuick.api.json.Json
+import kuick.api.rpc.Request
 import kuick.api.rpc.RpcHandleMap
 import kuick.api.rpc.handleRpcRequest
-import kuick.json.Json
 
 data class AggregationRouting(
     val parent: Route,
@@ -40,6 +41,7 @@ data class AggregationRouting(
                         "result" to result
                     )
                 } catch (exception: Throwable) { //TODO other exceptions handling
+                    exception.printStackTrace()
                     mapOf(
                         "status" to "500",
                         "message" to exception.message

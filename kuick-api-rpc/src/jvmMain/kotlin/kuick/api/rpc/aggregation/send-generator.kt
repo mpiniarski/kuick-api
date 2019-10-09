@@ -17,50 +17,49 @@ fun main(args: Array<String>) {
             """
 package kuick.api.rpc.aggregation
 
-import com.google.gson.JsonElement
-import com.google.gson.reflect.TypeToken
-import kuick.json.Json
+import kuick.api.json.Json
+import kuick.api.rpc.Device
+import kuick.api.rpc.Request
+import kuick.api.rpc.Response
+import kuick.api.rpc.toResponse
 
-inline fun <reified A : Any> JsonElement.toResponse(): Response<A> {
-    val asString = this.toString()
-    val status = this.asJsonObject["status"].asString
-    return if (status.startsWith("2")) {
-        val type = TypeToken.getParameterized(Response.Success::class.java, A::class.java).type
-        Json.fromJson<Response.Success<A>>(asString, type)
-    } else
-        Json.fromJson<Response.Failure<A>>(asString)
-}
+// TODO - conflicts with single request send from Device when AggregatingDevice is used
+// inline fun <reified A : Any, R> AggregatingDevice<R>.send(
+//     vararg requests: Request<A>
+// ): Device.Result<List<Response<A>>, R> {
+//     val result = aggregatedCall(requests.toList())
+//     val parsedResult = Json.jsonParser.parse(result.getBodyAsString())
+//         .asJsonArray
+//         .map { it.toResponse<A>() }
+//     return Device.Result(parsedResult, result)
+// }
 
-inline fun <reified A : Any> Device.send(
-    vararg requests: Request<A>
-): List<Response<A>> {
-    val result = aggregatedSend(requests.toList())
-    return Json.jsonParser.parse(result).asJsonArray
-        .map { it.toResponse<A>() }
-}
-
-inline fun <reified A : Any> Device.send(
+inline fun <reified A : Any, R> AggregatingDevice<R>.send(
     requests: List<Request<A>>
-): List<Response<A>> {
-    val result = aggregatedSend(requests)
-    return Json.jsonParser.parse(result).asJsonArray
+): Device.Result<List<Response<A>>, R> {
+    val result = aggregatedCall(requests)
+    val parsedResult = Json.jsonParser.parse(result.getBodyAsString())
+        .asJsonArray
         .map { it.toResponse<A>() }
+    return Device.Result(parsedResult, result)
 }
                 
-${(1..NUM).map { num ->
-                "inline fun <${genericTypesList(num).joinToString(", ") { "reified $it : Any" }}> Device.send(\n" +
+${(2..NUM).map { num ->
+                "inline fun <${genericTypesList(num).joinToString(", ") { "reified $it : Any" }}, R> AggregatingDevice<R>.send(\n" +
 
                     (1..num).map { "\t_$it: Request<${genericType(it)}>" }.joinToString(",\n") + "\n" +
-                    "): Tuple$num<${(1..num).map {
+                    "): Device.Result<Tuple$num<${(1..num).map {
                         "Response<${genericType(it)}>"
-                    }.joinToString(", ")}> { \n" +
-                    "\tval result = aggregatedSend(listOf(${variables(num)}))\n" +
-                    "\tval responses = Json.jsonParser.parse(result).asJsonArray\n" +
-                    "\treturn Tuple$num(\n" +
+                    }.joinToString(", ")}>, R> { \n" +
+                    "\tval result = aggregatedCall(listOf(${variables(num)}))\n" +
+                    "\tval responses = Json.jsonParser.parse(result.getBodyAsString())\n" +
+                        "\t\t.asJsonArray\n" +
+                    "\tval parsedResult = Tuple$num(\n" +
                     (1..num).map {
                         "\t\tresponses[${it-1}].toResponse<${genericType(it)}>()"
                     }.joinToString(",\n") + "\n" +
                     "\t)\n" +
+                    "\t return Device.Result(parsedResult, result)\n" +
                     "}"
             }.joinToString("\n\n")}
             """

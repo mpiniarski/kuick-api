@@ -1,116 +1,112 @@
 package kuick.api.rpc.aggregation
 
-import com.google.gson.JsonElement
-import com.google.gson.reflect.TypeToken
-import kuick.json.Json
+import kuick.api.json.Json
+import kuick.api.rpc.Device
+import kuick.api.rpc.Request
+import kuick.api.rpc.Response
+import kuick.api.rpc.toResponse
 
-inline fun <reified A : Any> JsonElement.toResponse(): Response<A> {
-    val asString = this.toString()
-    val status = this.asJsonObject["status"].asString
-    return if (status.startsWith("2")) {
-        val type = TypeToken.getParameterized(Response.Success::class.java, A::class.java).type
-        Json.fromJson<Response.Success<A>>(asString, type)
-    } else
-        Json.fromJson<Response.Failure<A>>(asString)
-}
+// TODO - conflicts with single request send from Device when AggregatingDevice is used
+// inline fun <reified A : Any, R> AggregatingDevice<R>.send(
+//     vararg requests: Request<A>
+// ): Device.Result<List<Response<A>>, R> {
+//     val result = aggregatedCall(requests.toList())
+//     val parsedResult = Json.jsonParser.parse(result.getBodyAsString())
+//         .asJsonArray
+//         .map { it.toResponse<A>() }
+//     return Device.Result(parsedResult, result)
+// }
 
-inline fun <reified A : Any> Device.send(
-    vararg requests: Request<A>
-): List<Response<A>> {
-    val result = aggregatedSend(requests.toList())
-    return Json.jsonParser.parse(result).asJsonArray
-        .map { it.toResponse<A>() }
-}
-
-inline fun <reified A : Any> Device.send(
+inline fun <reified A : Any, R> AggregatingDevice<R>.send(
     requests: List<Request<A>>
-): List<Response<A>> {
-    val result = aggregatedSend(requests)
-    return Json.jsonParser.parse(result).asJsonArray
+): Device.Result<List<Response<A>>, R> {
+    val result = aggregatedCall(requests)
+    val parsedResult = Json.jsonParser.parse(result.getBody())
+        .asJsonArray
         .map { it.toResponse<A>() }
+    return Device.Result(parsedResult, result)
 }
-
-inline fun <reified A : Any> Device.send(
-    _1: Request<A>
-): Tuple1<Response<A>> {
-    val result = aggregatedSend(listOf(_1))
-    val responses = Json.jsonParser.parse(result).asJsonArray
-    return Tuple1(
-        responses[0].toResponse<A>()
-    )
-}
-
-inline fun <reified A : Any, reified B : Any> Device.send(
+                
+inline fun <reified A : Any, reified B : Any, R> AggregatingDevice<R>.send(
     _1: Request<A>,
     _2: Request<B>
-): Tuple2<Response<A>, Response<B>> {
-    val result = aggregatedSend(listOf(_1, _2))
-    val responses = Json.jsonParser.parse(result).asJsonArray
-    return Tuple2(
+): Device.Result<Tuple2<Response<A>, Response<B>>, R> { 
+    val result = aggregatedCall(listOf(_1, _2))
+    val responses = Json.jsonParser.parse(result.getBody())
+        .asJsonArray
+    val parsedResult = Tuple2(
         responses[0].toResponse<A>(),
         responses[1].toResponse<B>()
     )
+     return Device.Result(parsedResult, result)
 }
 
-inline fun <reified A : Any, reified B : Any, reified C : Any> Device.send(
+inline fun <reified A : Any, reified B : Any, reified C : Any, R> AggregatingDevice<R>.send(
     _1: Request<A>,
     _2: Request<B>,
     _3: Request<C>
-): Tuple3<Response<A>, Response<B>, Response<C>> {
-    val result = aggregatedSend(listOf(_1, _2, _3))
-    val responses = Json.jsonParser.parse(result).asJsonArray
-    return Tuple3(
+): Device.Result<Tuple3<Response<A>, Response<B>, Response<C>>, R> { 
+    val result = aggregatedCall(listOf(_1, _2, _3))
+    val responses = Json.jsonParser.parse(result.getBody())
+        .asJsonArray
+    val parsedResult = Tuple3(
         responses[0].toResponse<A>(),
         responses[1].toResponse<B>(),
         responses[2].toResponse<C>()
     )
+     return Device.Result(parsedResult, result)
 }
 
-inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any> Device.send(
+inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, R> AggregatingDevice<R>.send(
     _1: Request<A>,
     _2: Request<B>,
     _3: Request<C>,
     _4: Request<D>
-): Tuple4<Response<A>, Response<B>, Response<C>, Response<D>> {
-    val result = aggregatedSend(listOf(_1, _2, _3, _4))
-    val responses = Json.jsonParser.parse(result).asJsonArray
-    return Tuple4(
+): Device.Result<Tuple4<Response<A>, Response<B>, Response<C>, Response<D>>, R> { 
+    val result = aggregatedCall(listOf(_1, _2, _3, _4))
+    val responses = Json.jsonParser.parse(result.getBody())
+        .asJsonArray
+    val parsedResult = Tuple4(
         responses[0].toResponse<A>(),
         responses[1].toResponse<B>(),
         responses[2].toResponse<C>(),
         responses[3].toResponse<D>()
     )
+     return Device.Result(parsedResult, result)
 }
 
-inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any> Device.send(
+inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, R> AggregatingDevice<R>.send(
     _1: Request<A>,
     _2: Request<B>,
     _3: Request<C>,
     _4: Request<D>,
     _5: Request<E>
-): Tuple5<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>> {
-    val result = aggregatedSend(listOf(_1, _2, _3, _4, _5))
-    val responses = Json.jsonParser.parse(result).asJsonArray
-    return Tuple5(
+): Device.Result<Tuple5<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>>, R> { 
+    val result = aggregatedCall(listOf(_1, _2, _3, _4, _5))
+    val responses = Json.jsonParser.parse(result.getBody())
+        .asJsonArray
+    val parsedResult = Tuple5(
         responses[0].toResponse<A>(),
         responses[1].toResponse<B>(),
         responses[2].toResponse<C>(),
         responses[3].toResponse<D>(),
         responses[4].toResponse<E>()
     )
+     return Device.Result(parsedResult, result)
 }
 
-inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, reified F : Any> Device.send(
+inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, reified F : Any, R> AggregatingDevice<R>.send(
     _1: Request<A>,
     _2: Request<B>,
     _3: Request<C>,
     _4: Request<D>,
     _5: Request<E>,
     _6: Request<F>
-): Tuple6<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>, Response<F>> {
-    val result = aggregatedSend(listOf(_1, _2, _3, _4, _5, _6))
-    val responses = Json.jsonParser.parse(result).asJsonArray
-    return Tuple6(
+): Device.Result<Tuple6<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>, Response<F>>, R> { 
+    val result = aggregatedCall(listOf(_1, _2, _3, _4, _5, _6))
+    val responses = Json.jsonParser.parse(result.getBody())
+        .asJsonArray
+    val parsedResult = Tuple6(
         responses[0].toResponse<A>(),
         responses[1].toResponse<B>(),
         responses[2].toResponse<C>(),
@@ -118,9 +114,10 @@ inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, 
         responses[4].toResponse<E>(),
         responses[5].toResponse<F>()
     )
+     return Device.Result(parsedResult, result)
 }
 
-inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, reified F : Any, reified G : Any> Device.send(
+inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, reified F : Any, reified G : Any, R> AggregatingDevice<R>.send(
     _1: Request<A>,
     _2: Request<B>,
     _3: Request<C>,
@@ -128,10 +125,11 @@ inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, 
     _5: Request<E>,
     _6: Request<F>,
     _7: Request<G>
-): Tuple7<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>, Response<F>, Response<G>> {
-    val result = aggregatedSend(listOf(_1, _2, _3, _4, _5, _6, _7))
-    val responses = Json.jsonParser.parse(result).asJsonArray
-    return Tuple7(
+): Device.Result<Tuple7<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>, Response<F>, Response<G>>, R> { 
+    val result = aggregatedCall(listOf(_1, _2, _3, _4, _5, _6, _7))
+    val responses = Json.jsonParser.parse(result.getBody())
+        .asJsonArray
+    val parsedResult = Tuple7(
         responses[0].toResponse<A>(),
         responses[1].toResponse<B>(),
         responses[2].toResponse<C>(),
@@ -140,9 +138,10 @@ inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, 
         responses[5].toResponse<F>(),
         responses[6].toResponse<G>()
     )
+     return Device.Result(parsedResult, result)
 }
 
-inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, reified F : Any, reified G : Any, reified H : Any> Device.send(
+inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, reified F : Any, reified G : Any, reified H : Any, R> AggregatingDevice<R>.send(
     _1: Request<A>,
     _2: Request<B>,
     _3: Request<C>,
@@ -151,10 +150,11 @@ inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, 
     _6: Request<F>,
     _7: Request<G>,
     _8: Request<H>
-): Tuple8<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>, Response<F>, Response<G>, Response<H>> {
-    val result = aggregatedSend(listOf(_1, _2, _3, _4, _5, _6, _7, _8))
-    val responses = Json.jsonParser.parse(result).asJsonArray
-    return Tuple8(
+): Device.Result<Tuple8<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>, Response<F>, Response<G>, Response<H>>, R> { 
+    val result = aggregatedCall(listOf(_1, _2, _3, _4, _5, _6, _7, _8))
+    val responses = Json.jsonParser.parse(result.getBody())
+        .asJsonArray
+    val parsedResult = Tuple8(
         responses[0].toResponse<A>(),
         responses[1].toResponse<B>(),
         responses[2].toResponse<C>(),
@@ -164,9 +164,10 @@ inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, 
         responses[6].toResponse<G>(),
         responses[7].toResponse<H>()
     )
+     return Device.Result(parsedResult, result)
 }
 
-inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, reified F : Any, reified G : Any, reified H : Any, reified I : Any> Device.send(
+inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, reified F : Any, reified G : Any, reified H : Any, reified I : Any, R> AggregatingDevice<R>.send(
     _1: Request<A>,
     _2: Request<B>,
     _3: Request<C>,
@@ -176,10 +177,11 @@ inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, 
     _7: Request<G>,
     _8: Request<H>,
     _9: Request<I>
-): Tuple9<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>, Response<F>, Response<G>, Response<H>, Response<I>> {
-    val result = aggregatedSend(listOf(_1, _2, _3, _4, _5, _6, _7, _8, _9))
-    val responses = Json.jsonParser.parse(result).asJsonArray
-    return Tuple9(
+): Device.Result<Tuple9<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>, Response<F>, Response<G>, Response<H>, Response<I>>, R> { 
+    val result = aggregatedCall(listOf(_1, _2, _3, _4, _5, _6, _7, _8, _9))
+    val responses = Json.jsonParser.parse(result.getBody())
+        .asJsonArray
+    val parsedResult = Tuple9(
         responses[0].toResponse<A>(),
         responses[1].toResponse<B>(),
         responses[2].toResponse<C>(),
@@ -190,9 +192,10 @@ inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, 
         responses[7].toResponse<H>(),
         responses[8].toResponse<I>()
     )
+     return Device.Result(parsedResult, result)
 }
 
-inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, reified F : Any, reified G : Any, reified H : Any, reified I : Any, reified J : Any> Device.send(
+inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, reified E : Any, reified F : Any, reified G : Any, reified H : Any, reified I : Any, reified J : Any, R> AggregatingDevice<R>.send(
     _1: Request<A>,
     _2: Request<B>,
     _3: Request<C>,
@@ -203,10 +206,11 @@ inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, 
     _8: Request<H>,
     _9: Request<I>,
     _10: Request<J>
-): Tuple10<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>, Response<F>, Response<G>, Response<H>, Response<I>, Response<J>> {
-    val result = aggregatedSend(listOf(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10))
-    val responses = Json.jsonParser.parse(result).asJsonArray
-    return Tuple10(
+): Device.Result<Tuple10<Response<A>, Response<B>, Response<C>, Response<D>, Response<E>, Response<F>, Response<G>, Response<H>, Response<I>, Response<J>>, R> { 
+    val result = aggregatedCall(listOf(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10))
+    val responses = Json.jsonParser.parse(result.getBody())
+        .asJsonArray
+    val parsedResult = Tuple10(
         responses[0].toResponse<A>(),
         responses[1].toResponse<B>(),
         responses[2].toResponse<C>(),
@@ -218,4 +222,5 @@ inline fun <reified A : Any, reified B : Any, reified C : Any, reified D : Any, 
         responses[8].toResponse<I>(),
         responses[9].toResponse<J>()
     )
+     return Device.Result(parsedResult, result)
 }

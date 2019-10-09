@@ -22,8 +22,8 @@ import kuick.api.core.parameters.include.IncludeParam
 import kuick.api.core.parameters.include.includeRelatedResources
 import kuick.api.core.parameters.preserve.FieldsParam
 import kuick.api.core.parameters.preserve.preserveFields
-import kuick.json.Json
-import kuick.json.Json.gson
+import kuick.api.json.Json
+import kuick.api.json.Json.gson
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.full.declaredMemberFunctions
